@@ -103,6 +103,36 @@ class Game(discord.Cog):
             if room['message_id'] == interaction.message.id:
                 your_room = room
 
+        channel = interaction.guild.get_thread(your_room['room_id'])
+        await channel.send('Город просыпается!')
+        await channel.send('Наступил день! Кто кажется самым подозрительным?')
+
+        players = [player.mention for player in await self.get_players(your_room, interaction)]
+        emoji = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️', '🔟']
+        embed = discord.Embed(title='Кто по вашему явлеяется мафией?',
+                              description='Просто нажмите на реакцию с нужным номером',
+                              color=discord.Colour.red())
+        embed.add_field(name='Игроки', value='\n'.join(map(lambda x: f"{x[0]} {x[1]}", list(zip(emoji, players)))))
+
+        vote_message = await channel.send(embed=embed)
+        info_message = await channel.send('У вас есть 45 секунд на раздумие и 15 секунд на голосование!')
+
+        # await asyncio.sleep(45) # 45 seconds to think
+
+        await info_message.edit('Начинайте голосовать!')
+
+        for i in range(len(players)):
+            await vote_message.add_reaction(emoji[i])
+
+        await asyncio.sleep(10)  # 15 seconds to vote
+
+        await self.vote(interaction, vote_message)
+
+        try:
+            await self.night(interaction)
+        except UnboundLocalError:
+            pass
+
 
     async def night(self, interaction):
         with open('db.json', 'r', encoding='UTF-8') as file:
@@ -125,8 +155,9 @@ class Game(discord.Cog):
                               color=discord.Colour.red())
         embed.add_field(name='Жертвы', value='\n'.join(map(lambda x: f"{x[0]} {x[1]}", list(zip(emoji, players)))))
 
-        # await asyncio.sleep(20) # 20 seconds to think
         vote_message = await mafia_channel.send(embed=embed)
+
+        # await asyncio.sleep(20) # 20 seconds to think
 
         for i in range(len(players)):
             await vote_message.add_reaction(emoji[i])
@@ -134,6 +165,11 @@ class Game(discord.Cog):
         await asyncio.sleep(10) # 10 seconds to vote
 
         await self.vote(interaction, vote_message)
+
+        try:
+            await self.day(interaction)
+        except UnboundLocalError:
+            pass
 
 
     async def vote(self, interaction, vote_message):
