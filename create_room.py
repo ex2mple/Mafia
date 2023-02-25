@@ -97,13 +97,15 @@ class Room(discord.Cog):
                 json.dump(data, file, indent=4)
 
             our_game = game.Game(self.bot)
-            await our_game.give_role(interaction) # Start game
+            await our_game.start_game(interaction)
 
 
     @discord.slash_command()
     async def create_room(self, ctx, name: str, voice_channel: discord.VoiceChannel, password: str = None):
         with open('db.json', 'r', encoding='UTF-8') as file:
             data = json.load(file)
+
+        await ctx.delete()
         guild = ctx.guild
         author = ctx.author
 

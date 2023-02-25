@@ -37,6 +37,21 @@ class Game(discord.Cog):
         await ctx.respond(embed=embed)
 
 
+    async def start_game(self, interaction):
+        await self.give_role(interaction)
+        while True:
+            vote_message = await self.night(interaction)
+            await asyncio.sleep(10)  # 10 seconds to vote
+            await self.vote(interaction, vote_message)
+            if await self.check_win(interaction) == 1:
+                break
+            vote_message = await self.day(interaction)
+            await asyncio.sleep(15)  # 15 seconds to vote
+            await self.vote(interaction, vote_message)
+            if await self.check_win(interaction) == 1:
+                break
+
+
     async def get_mafia(self, your_room, interaction):
         ids = []
         for player in your_room['players_roles']:
@@ -89,7 +104,6 @@ class Game(discord.Cog):
         with open('db.json', 'w', encoding='UTF-8') as file:
             json.dump(data, file, indent=4)
 
-        await self.night(interaction)
 
     async def day(self, interaction):
         with open('db.json', 'r', encoding='UTF-8') as file:
@@ -122,14 +136,7 @@ class Game(discord.Cog):
         for i in range(len(players)):
             await vote_message.add_reaction(emoji[i])
 
-        await asyncio.sleep(10)  # 15 seconds to vote
-
-        await self.vote(interaction, vote_message)
-
-        try:
-            await self.night(interaction)
-        except UnboundLocalError:
-            pass
+        return vote_message
 
 
     async def night(self, interaction):
@@ -164,14 +171,7 @@ class Game(discord.Cog):
         for i in range(len(players)):
             await vote_message.add_reaction(emoji[i])
 
-        await asyncio.sleep(10) # 10 seconds to vote
-
-        await self.vote(interaction, vote_message)
-
-        try:
-            await self.day(interaction)
-        except UnboundLocalError:
-            pass
+        return vote_message
 
 
     async def vote(self, interaction, vote_message):
@@ -221,7 +221,6 @@ class Game(discord.Cog):
         with open('db.json', 'w', encoding='UTF-8') as file:
             json.dump(data, file, indent=4)
 
-        await self.check_win(interaction)
 
 
     async def check_win(self, interaction):
@@ -237,7 +236,7 @@ class Game(discord.Cog):
         elif room['citizen_count'] == 0:
             embed = discord.Embed(title='Мафия победила!', color=discord.Colour.red())
         else:
-            return
+            return 0
 
         await channel.send(embed=embed)
         await asyncio.sleep(15)
@@ -252,6 +251,8 @@ class Game(discord.Cog):
 
         with open('db.json', 'w', encoding='UTF-8') as file:
             json.dump(data, file, indent=4)
+
+        return 1
 
 
     @discord.slash_command()
