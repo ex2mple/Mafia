@@ -1,5 +1,7 @@
 import discord
 import json
+
+import cards
 import game
 
 
@@ -72,32 +74,45 @@ class Room(discord.Cog):
 
             await interaction.message.delete()
 
-            rooms = data[f'{interaction.guild.id}']['rooms']
-            for room in rooms:
-                if room['message_id'] == interaction.message.id:
-                    your_room = room
+            rooms, room = cards.get_room(interaction, data)
 
-            voice_channel = your_room['voice_channel']
+            voice_channel = room['voice_channel']
 
-            if interaction.user.id != your_room['players'][0]: # if not the host pressed the button
+            if interaction.user.id != room['players'][0]: # if not the host pressed the button
                 return
 
-            thread = await interaction.channel.create_thread(name=f"{your_room['name']}")
-            mafia_thread = await interaction.channel.create_thread(name=f"Mafia {your_room['name']}")
+            thread = await interaction.channel.create_thread(name=f"{room['name']}")
+            mafia_thread = await interaction.channel.create_thread(name=f"Mafia {room['name']}")
 
-            for player in your_room['players']:
+            for player in room['players']:
                 player = interaction.guild.get_member(player)
                 await thread.add_user(player)
 
-            your_room['is_started'] = True
-            your_room['room_id'] = thread.id
-            your_room['mafia_id'] = mafia_thread.id # Create mafia's thread
+            room['is_started'] = True
+            room['room_id'] = thread.id
+            room['mafia_id'] = mafia_thread.id # Create mafia's thread
 
             with open('db.json', 'w', encoding='UTF-8') as file:
                 json.dump(data, file, indent=4)
 
             our_game = game.Game(self.bot)
             await our_game.start_game(interaction)
+
+        @discord.ui.button(label='Удалить комнату', style=discord.ButtonStyle.danger)
+        async def delete_button_callback(self, button, interaction):
+            with open('db.json', 'r', encoding='UTF-8') as file:
+                data = json.load(file)
+
+            await interaction.message.delete()
+            rooms, room = cards.get_room(interaction, data)
+
+            if interaction.user.id != room['players'][0]: # if not the host pressed the button
+                return
+
+            rooms.remove(room)
+
+            with open('db.json', 'w', encoding='UTF-8') as file:
+                json.dump(data, file, indent=4)
 
 
     @discord.slash_command()
