@@ -1,22 +1,5 @@
 import random
-
-
-class Role:
-    def __init__(self, quantity):
-        self.quantity = quantity
-
-
-class Mafia(Role):
-    pass
-
-
-class Citizen(Role):
-    pass
-
-
-class Sherif(Role):
-    pass
-
+import discord
 
 def get_cards(players_quantity):
     match players_quantity:
@@ -37,3 +20,8 @@ def get_cards(players_quantity):
 
     return roles
 
+def get_room(interaction, data):
+    rooms = data[f'{interaction.guild.id}']['rooms']
+    for room in rooms:
+        if room['message_id'] == interaction.message.id:
+            return rooms, room
