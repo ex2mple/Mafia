@@ -27,7 +27,7 @@ class Game(discord.Cog):
                         value='Играет на стороне мирных жителей. Ночью просыпается отдельно и может проверить '
                               'любого игрока. Полученные данные может обнародовать.', inline=False)
         embed.add_field(name='Ход игры',
-                        value='Игроки получают свои роли (см. личные сообщения).\n'
+                        value='Игроки получают свои роли.\n'
                               'Игра разделенная на 2 части: "день" и "ночь"\n'
                               'В первую ночь ничего не происходит. Мафия может наметить себе "жертву".\n'
                               'Днем все игроки обсуждают кто может быть Мафиози и голосуют за них. Мафия в свою очередь пытается доказать свою невиновность.\n'
@@ -103,6 +103,8 @@ class Game(discord.Cog):
             if room['message_id'] == interaction.message.id:
                 your_room = room
 
+        await interaction.guild.get_channel(your_room['voice_channel']).set_permissions(player, speak=True)
+
         channel = interaction.guild.get_thread(your_room['room_id'])
         await channel.send('Город просыпается!')
         await channel.send('Наступил день! Кто кажется самым подозрительным?')
@@ -117,7 +119,7 @@ class Game(discord.Cog):
         vote_message = await channel.send(embed=embed)
         info_message = await channel.send('У вас есть 45 секунд на раздумие и 15 секунд на голосование!')
 
-        # await asyncio.sleep(45) # 45 seconds to think
+        await asyncio.sleep(45) # 45 seconds to think
 
         await info_message.edit('Начинайте голосовать!')
 
@@ -143,9 +145,11 @@ class Game(discord.Cog):
             if room['message_id'] == interaction.message.id:
                 your_room = room
 
+        await interaction.guild.get_channel(your_room['voice_channel']).set_permissions(player, speak=False)
+
         channel = interaction.guild.get_thread(your_room['room_id'])
         mafia_channel = interaction.guild.get_thread(your_room['mafia_id'])
-        await channel.send('Город засыпает - просыпается мафия!')
+        await channel.send('Город засыпает, просыпается мафия!')
         await mafia_channel.send('И снова ночь на дворе! Кто станет следующей жертвой? Выбор за вами!')
 
         players = [player.mention for player in await self.get_players(your_room, interaction)]
@@ -156,8 +160,11 @@ class Game(discord.Cog):
         embed.add_field(name='Жертвы', value='\n'.join(map(lambda x: f"{x[0]} {x[1]}", list(zip(emoji, players)))))
 
         vote_message = await mafia_channel.send(embed=embed)
+        info_message = await mafia_channel.send('У вас есть 20 секунд на раздумие и 10 секунд на голосование!')
 
-        # await asyncio.sleep(20) # 20 seconds to think
+        await asyncio.sleep(20) # 20 seconds to think
+
+        await info_message.edit('Начинайте голосовать!')
 
         for i in range(len(players)):
             await vote_message.add_reaction(emoji[i])

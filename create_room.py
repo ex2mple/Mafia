@@ -88,7 +88,6 @@ class Room(discord.Cog):
             for player in your_room['players']:
                 player = interaction.guild.get_member(player)
                 await thread.add_user(player)
-                await interaction.guild.get_channel(voice_channel).set_permissions(player, speak=False) # mute players
 
             your_room['is_started'] = True
             your_room['room_id'] = thread.id
