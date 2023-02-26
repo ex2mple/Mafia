@@ -111,9 +111,9 @@ class Game(discord.Cog):
 
         rooms, room = get_room(interaction, data)
 
-        for player in room['players']:
-            player = interaction.guild.get_member(player)
-            await interaction.guild.get_channel(room['voice_channel']).set_permissions(player, speak=True)
+        # for player in room['players']:
+        #     player = interaction.guild.get_member(player)
+        #     await interaction.guild.get_channel(room['voice_channel']).set_permissions(player, speak=True)
 
         channel = interaction.guild.get_thread(room['room_id'])
         await channel.send('Город просыпается!')
@@ -145,9 +145,9 @@ class Game(discord.Cog):
 
         rooms, room = get_room(interaction, data)
 
-        for player in room['players']:
-            player = interaction.guild.get_member(player)
-            await interaction.guild.get_channel(room['voice_channel']).set_permissions(player, speak=False)
+        # for player in room['players']:
+        #     player = interaction.guild.get_member(player)
+        #     await interaction.guild.get_channel(room['voice_channel']).set_permissions(player, speak=False)
 
         channel = interaction.guild.get_thread(room['room_id'])
         mafia_channel = interaction.guild.get_thread(room['mafia_id'])
@@ -233,8 +233,10 @@ class Game(discord.Cog):
 
         if room['mafia_count'] == 0:
             embed = discord.Embed(title='Мирные жители победили!', color=discord.Colour.green())
-        elif room['citizen_count'] == 0:
-            embed = discord.Embed(title='Мафия победила!', color=discord.Colour.red())
+        elif room['citizen_count'] == 1:
+            embed = discord.Embed(title='Мафия победила!', description='\n'.join(
+                                  [mafia.mention for mafia in await self.get_mafia(room, interaction)]),
+                                  color=discord.Colour.red())
         else:
             return 0
 
@@ -253,15 +255,6 @@ class Game(discord.Cog):
             json.dump(data, file, indent=4)
 
         return 1
-
-
-    @discord.slash_command()
-    async def test_react(self, ctx):
-        msg = await ctx.send('Test message')
-        msg = self.bot.get_message(msg.id)
-        await msg.add_reaction('😀')
-        await asyncio.sleep(1)
-        print(msg.reactions)
 
 
 def setup(bot):

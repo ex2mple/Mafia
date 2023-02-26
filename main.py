@@ -4,7 +4,7 @@ from discord.ext import commands
 
 token = 'MTA3NTcyNDYzNTU5NDgzMzkyMA.Gxn5GY.2zyG1zGsYPCJEMLSbagrzqej8rgTecoLwT6lQU'
 intents = discord.Intents.all()
-bot = discord.Bot(debug_guilds=[921377212500967444, 771736345437274132], intents=intents)
+bot = discord.Bot(debug_guilds=[921377212500967444, 771736345437274132, 1079115208032784444], intents=intents)
 
 
 @bot.event
