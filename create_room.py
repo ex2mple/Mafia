@@ -33,7 +33,7 @@ class Room(discord.Cog):
             super().__init__()
             self.bot = bot
 
-        async def join(self, room, interaction):
+        async def join(self, interaction):
             with open('db.json', 'r', encoding='UTF-8') as file:
                 data = json.load(file)
 
@@ -62,7 +62,7 @@ class Room(discord.Cog):
                 modal = Room.CheckPassword(bot=self.bot, title="Введи пароль от комнаты")
                 await interaction.response.send_modal(modal)
             else:
-                await self.join(room, interaction)
+                await self.join(interaction)
 
         @discord.ui.button(label='Начать', style=discord.ButtonStyle.success)
         async def start_button_callback(self, button, interaction):
@@ -89,8 +89,8 @@ class Room(discord.Cog):
             with open('db.json', 'w', encoding='UTF-8') as file:
                 json.dump(data, file, indent=4)
 
-            our_game = game.Game(self.bot)
-            await our_game.start_game(interaction)
+            our_game = game.Game(self.bot, interaction)
+            await our_game.start_game()
 
         @discord.ui.button(label='Удалить комнату', style=discord.ButtonStyle.danger)
         async def delete_button_callback(self, button, interaction):
