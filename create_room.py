@@ -81,6 +81,7 @@ class Room(discord.Cog):
                 for player in room['players']:
                     player = interaction.guild.get_member(player)
                     await thread.add_user(player)
+                    await interaction.channel.set_permissions(player, add_reactions=False)
 
                 room['room_id'] = thread.id
                 room['mafia_id'] = mafia_thread.id # Create mafia's thread
@@ -153,12 +154,6 @@ class Room(discord.Cog):
 
         with open('db.json', 'w', encoding='UTF-8') as file:
             json.dump(data, file, indent=4)
-
-    @discord.slash_command()
-    async def check_pass(self, ctx):
-        modal = Room.Password(title="Введи пароль от комнаты")
-        password = await ctx.send_modal(modal)
-        print(password)
 
 
 def setup(bot):

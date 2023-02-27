@@ -37,7 +37,7 @@ class Game(discord.Cog):
         await ctx.respond(embed=embed)
 
 
-    async def start_game(self, interaction):
+    async def start_game(self, interaction: discord.Interaction) -> None:
         await self.give_role(interaction)
         while True:
             vote_message = await self.night(interaction)
@@ -52,7 +52,7 @@ class Game(discord.Cog):
                 break
 
 
-    async def get_mafia(self, your_room, interaction):
+    async def get_mafia(self, your_room: dict, interaction: discord.Interaction) -> list:
         ids = []
         for player in your_room['players_roles']:
             if player['role'] == 'Mafia':
@@ -60,14 +60,14 @@ class Game(discord.Cog):
         return ids
 
 
-    async def get_players(self, your_room, interaction):
+    async def get_players(self, your_room: dict, interaction: discord.Interaction) -> list:
         players = []
         for player in your_room['players_roles']:
             players.append(interaction.guild.get_member(player['id']))
         return players
 
 
-    async def give_role(self, interaction):
+    async def give_role(self, interaction: discord.Interaction) -> None:
         with open('db.json', 'r', encoding='UTF-8') as file:
             data = json.load(file)
 
@@ -78,46 +78,40 @@ class Game(discord.Cog):
 
         for player in room['players_roles']:
             choice = random.choice(roles)
+            discord_player = interaction.guild.get_member(player["id"])
+
             if choice == 'Mafia':
+                await mafia_thread.add_user(discord_player)
                 room['mafia_count'] += 1
             if choice in self.game_roles:
                 room['citizen_count'] += 1
 
-            player['role'] = f'{choice}'
+            player['role'] = choice
             roles.remove(choice)
-
-        for player in room['players_roles']:
-            player1 = interaction.guild.get_member(player["id"])
-
-            embed = discord.Embed(title='Инфо', description=f'Ваша роль - {player["role"]}')
-            embed.color = discord.Colour.green()
-
-            if player['role'] == 'Mafia':
-                embed.add_field(name='Мафиози этой игры: ', value='\n'.join(
-                                  [mafia.mention for mafia in await self.get_mafia(room, interaction)]))
-                embed.color = discord.Colour.red()
-
-                await mafia_thread.add_user(player1) # add mafia player in other thread
-
-            # await player1.send(embed=embed) # send private message with player's role
 
         with open('db.json', 'w', encoding='UTF-8') as file:
             json.dump(data, file, indent=4)
 
 
-    async def day(self, interaction):
+    async def day(self, interaction: discord.Interaction) -> discord.Message:
+        """
+
+        :param interaction:
+        :return:
+        """
         with open('db.json', 'r', encoding='UTF-8') as file:
             data = json.load(file)
 
         rooms, room = get_room(interaction, data)
+        voice_channel = interaction.guild.get_channel(room['voice_channel'])
 
-        # for player in room['players']:
-        #     player = interaction.guild.get_member(player)
-        #     await interaction.guild.get_channel(room['voice_channel']).set_permissions(player, speak=True)
+        if voice_channel:
+            for player in room['players']:
+                player = interaction.guild.get_member(player)
+                await voice_channel.set_permissions(player, speak=True)
 
         channel = interaction.guild.get_thread(room['room_id'])
         await channel.send('Город просыпается!')
-        await channel.send('Наступил день! Кто кажется самым подозрительным?')
 
         players = [player.mention for player in await self.get_players(room, interaction)]
         emoji = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️', '🔟']
@@ -126,12 +120,11 @@ class Game(discord.Cog):
                               color=discord.Colour.red())
         embed.add_field(name='Игроки', value='\n'.join(map(lambda x: f"{x[0]} {x[1]}", list(zip(emoji, players)))))
 
-        vote_message = await channel.send(embed=embed)
-        info_message = await channel.send('У вас есть 45 секунд на раздумие и 15 секунд на голосование!')
+        vote_message = await channel.send(embed=embed, content='У вас есть 45 секунд на раздумие и 15 секунд на голосование!')
 
         await asyncio.sleep(45) # 45 seconds to think
 
-        await info_message.edit('Начинайте голосовать!')
+        await vote_message.edit(content='Начинайте голосовать!')
 
         for i in range(len(players)):
             await vote_message.add_reaction(emoji[i])
@@ -139,20 +132,26 @@ class Game(discord.Cog):
         return vote_message
 
 
-    async def night(self, interaction):
+    async def night(self, interaction: discord.Interaction) -> discord.Message:
+        """
+
+        :param interaction:
+        :return: vote_message: discord.Message
+        """
         with open('db.json', 'r', encoding='UTF-8') as file:
             data = json.load(file)
 
         rooms, room = get_room(interaction, data)
+        voice_channel = interaction.guild.get_channel(room['voice_channel'])
 
-        # for player in room['players']:
-        #     player = interaction.guild.get_member(player)
-        #     await interaction.guild.get_channel(room['voice_channel']).set_permissions(player, speak=False)
+        if voice_channel:
+            for player in room['players']:
+                player = interaction.guild.get_member(player)
+                await voice_channel.set_permissions(player, speak=False)
 
         channel = interaction.guild.get_thread(room['room_id'])
         mafia_channel = interaction.guild.get_thread(room['mafia_id'])
         await channel.send('Город засыпает, просыпается мафия!')
-        await mafia_channel.send('И снова ночь на дворе! Кто станет следующей жертвой? Выбор за вами!')
 
         players = [player.mention for player in await self.get_players(room, interaction)]
         emoji = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️', '🔟']
@@ -161,12 +160,11 @@ class Game(discord.Cog):
                               color=discord.Colour.red())
         embed.add_field(name='Жертвы', value='\n'.join(map(lambda x: f"{x[0]} {x[1]}", list(zip(emoji, players)))))
 
-        vote_message = await mafia_channel.send(embed=embed)
-        info_message = await mafia_channel.send('У вас есть 20 секунд на раздумие и 10 секунд на голосование!')
+        vote_message = await mafia_channel.send(content='У вас есть 20 секунд на раздумие и 10 секунд на голосование!', embed=embed)
 
         await asyncio.sleep(20) # 20 seconds to think
 
-        await info_message.edit('Начинайте голосовать!')
+        await vote_message.edit(content='Начинайте голосовать!')
 
         for i in range(len(players)):
             await vote_message.add_reaction(emoji[i])
@@ -174,7 +172,13 @@ class Game(discord.Cog):
         return vote_message
 
 
-    async def vote(self, interaction, vote_message):
+    async def vote(self, interaction: discord.Interaction, vote_message: discord.Message) -> None:
+        """
+
+        :param interaction:
+        :param vote_message:
+        :return:
+        """
         with open('db.json', 'r', encoding='UTF-8') as file:
             data = json.load(file)
 
@@ -188,28 +192,23 @@ class Game(discord.Cog):
         sorted_rc: list = sorted(reactions_count)
 
         if sorted_rc.index(max(sorted_rc)) != len(sorted_rc) - 1:
-            embed = discord.Embed(title='Итог',
+            embed = discord.Embed(title='Итоги голосования',
                                   description=f'Мнения разделились. Никого не убили!',
-                                  color=discord.Colour.green())
+                                  color=discord.Colour.blurple())
             await channel.send(embed=embed)
             return
-        else:
-            max_count = max(reactions_count)
 
-        for result in list(zip(reactions_count, players)):
-            if result[0] == max_count:
-                for player in room['players_roles']:
-                    if player['id'] == result[1]:
-                        role = player['role']
-                        id = player['id']
-                        room['players_roles'].remove(player)
+        winner = reactions_count.index(max(reactions_count))
 
-        if role == 'Mafia':
-            room['mafia_count'] -= 1
-        elif role in self.game_roles:
-            room['citizen_count'] -= 1
+        for player in room['players_roles']:
+            if player['id'] == players[winner]:
+                role, id = player['role'], player['id']
+                room['players_roles'].remove(player)
 
-        embed = discord.Embed(title='Итог',
+        player_count = 'mafia_count' if role == 'Mafia' else 'citizen_count'
+        room[player_count] -= 1
+
+        embed = discord.Embed(title='Итоги голосования',
                               description=f'Был убит: {interaction.guild.get_member(id).mention}',
                               color=discord.Colour.red() if role != 'Mafia' else discord.Colour.green())
         embed.add_field(name='Его роль', value=role)
@@ -217,13 +216,18 @@ class Game(discord.Cog):
                         inline=False)
 
         await channel.send(embed=embed)
+        await interaction.channel.set_permissions(interaction.guild.get_member(id), send_messages=False)
 
         with open('db.json', 'w', encoding='UTF-8') as file:
             json.dump(data, file, indent=4)
 
 
+    async def check_win(self, interaction: discord.Interaction) -> int:
+        """
 
-    async def check_win(self, interaction):
+        :param interaction: discord.Interaction
+        :return: int
+        """
         with open('db.json', 'r', encoding='UTF-8') as file:
             data = json.load(file)
 
@@ -233,7 +237,7 @@ class Game(discord.Cog):
 
         if room['mafia_count'] == 0:
             embed = discord.Embed(title='Мирные жители победили!', color=discord.Colour.green())
-        elif room['citizen_count'] == 1:
+        elif room['citizen_count'] == 0: # ВЕРНУТЬ НА 1
             embed = discord.Embed(title='Мафия победила!', description='\n'.join(
                                   [mafia.mention for mafia in await self.get_mafia(room, interaction)]),
                                   color=discord.Colour.red())
@@ -241,13 +245,14 @@ class Game(discord.Cog):
             return 0
 
         await channel.send(embed=embed)
-        await asyncio.sleep(15)
+        await asyncio.sleep(10)
 
-        mafia_thread = interaction.guild.get_thread(room['mafia_id'])
-        citizen_thread = interaction.guild.get_thread(room['room_id'])
+        await interaction.guild.get_thread(room['mafia_id']).delete()
+        await interaction.guild.get_thread(room['room_id']).delete()
 
-        await mafia_thread.delete()
-        await citizen_thread.delete()
+        for player in room['players']:
+            player = interaction.guild.get_member(player)
+            await interaction.channel.set_permissions(player, add_reactions=True, send_messages=True)
 
         rooms.remove(room)
 
